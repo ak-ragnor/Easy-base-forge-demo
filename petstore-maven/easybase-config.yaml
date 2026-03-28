@@ -1,0 +1,53 @@
+# EasyBase Forge — Petstore Maven Demo Configuration
+# Demonstrates: FLAT layout, all generate options enabled
+
+basePackage: com.example.petstore
+
+output:
+  # Write generated sources directly into src/main/java (they live alongside custom code)
+  directory: src/main/java
+  # FLAT: all resources share one set of packages (no per-resource sub-packages)
+  # Ideal when multiple resources share DTOs (e.g., PetDTO used in both pets + owners responses)
+  layout: FLAT
+
+structure:
+  controller:
+    package: "{basePackage}.controller"
+    basePackage: "{basePackage}.controller.base"
+  delegate:
+    package: "{basePackage}.delegate"
+  dto:
+    package: "{basePackage}.dto"
+
+generate:
+  # Generate abstract delegate implementation stubs (delegateImpl: true)
+  # Produces: {Resource}ApiDelegateImplBase (always overwritten) + {Resource}ApiDelegateImpl (never overwritten)
+  delegateImpl: true
+
+  # Wrap all responses in ResponseEntity<T> — gives full HTTP control (status, headers)
+  # Options: ALWAYS | NEVER | VOID_ONLY
+  responseEntityWrapping: ALWAYS
+
+  # Generate Jakarta bean validation annotations (@NotNull, @Size, @Min, @Max, @Pattern, @Email)
+  beanValidation: true
+
+  # Inject Spring Data Pageable for paginated endpoints; return Page<T>
+  # Options: NONE | SPRING_DATA
+  pagination: SPRING_DATA
+
+  # Add @Generated("EasyBase Forge") to all generated files for tooling awareness
+  addGeneratedAnnotation: true
+
+  # Multiple authors — all appear in @author Javadoc on every generated file
+  authors:
+    - "EasyBase Demo"
+    - "Akhash R"
+
+  # Add @CrossOrigin("*") to all generated base controllers
+  crossOrigin: "*"
+
+  # Add @Slf4j to all generated base controllers (Lombok-powered logging)
+  slf4j: true
+
+  # Shell command to run after generation completes (e.g. formatter, linter)
+  postGenerateCommand: "echo 'EasyBase: generation complete for petstore-maven.'"
