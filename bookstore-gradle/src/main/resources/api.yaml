@@ -1,0 +1,577 @@
+openapi: 3.0.3
+info:
+  title: Bookstore API
+  description: |
+    Bookstore REST API demonstrating EasyBase Forge with Gradle:
+    - MULTI_MODULE layout (per-resource sub-packages)
+    - Custom response wrapper (ApiResponse / ApiPageResponse)
+    - VOID_ONLY ResponseEntity wrapping
+    - Spring Data pagination
+    - oneOf with discriminator (book edition types)
+    - allOf composition (update/patch requests)
+    - readOnly fields, nullable fields
+    - Pattern validation (ISBN-13), email format
+    - Boolean, enum string, nested object schemas
+  version: 1.0.0
+
+tags:
+  - name: books
+    description: Book catalog management
+  - name: authors
+    description: Author management
+
+paths:
+  /books:
+    get:
+      tags: [books]
+      operationId: listBooks
+      summary: List books (paginated, returns ApiPageResponse<BookDTO>)
+      parameters:
+        - name: genre
+          in: query
+          schema:
+            type: string
+            enum: [fiction, non_fiction, science, history, biography, technology, art]
+        - name: authorId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: available
+          in: query
+          schema:
+            type: boolean
+        - name: language
+          in: query
+          schema:
+            type: string
+      x-easybase-paginated: true
+      responses:
+        '200':
+          description: Paginated list of books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDTO'
+
+    post:
+      tags: [books]
+      operationId: createBook
+      summary: Add a book to the catalog (returns ApiResponse<BookDTO>)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookRequest'
+      responses:
+        '201':
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDTO'
+
+  /books/{id}:
+    get:
+      tags: [books]
+      operationId: getBook
+      summary: Get book by ID (returns ApiResponse<BookDTO>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Book found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [books]
+      operationId: updateBook
+      summary: Full book update (returns ApiResponse<BookDTO>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDTO'
+
+    patch:
+      tags: [books]
+      operationId: patchBook
+      summary: Partial book update (allOf, returns ApiResponse<BookDTO>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBookRequest'
+      responses:
+        '200':
+          description: Patched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDTO'
+
+    delete:
+      tags: [books]
+      operationId: deleteBook
+      summary: Remove book (void — uses ResponseEntity<Void> due to VOID_ONLY)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Deleted
+
+  /books/{id}/edition:
+    get:
+      tags: [books]
+      operationId: getBookEdition
+      summary: Get edition details (oneOf with discriminator)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Edition info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookEdition'
+
+  /authors:
+    get:
+      tags: [authors]
+      operationId: listAuthors
+      summary: List authors (paginated, returns ApiPageResponse<AuthorDTO>)
+      parameters:
+        - name: nationality
+          in: query
+          schema:
+            type: string
+        - name: genre
+          in: query
+          schema:
+            type: string
+      x-easybase-paginated: true
+      responses:
+        '200':
+          description: Paginated list of authors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDTO'
+
+    post:
+      tags: [authors]
+      operationId: createAuthor
+      summary: Register an author (returns ApiResponse<AuthorDTO>)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthorRequest'
+      responses:
+        '201':
+          description: Author registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDTO'
+
+  /authors/{id}:
+    get:
+      tags: [authors]
+      operationId: getAuthor
+      summary: Get author by ID (returns ApiResponse<AuthorDTO>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Author found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [authors]
+      operationId: updateAuthor
+      summary: Update author info (returns ApiResponse<AuthorDTO>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthorRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDTO'
+
+    delete:
+      tags: [authors]
+      operationId: deleteAuthor
+      summary: Remove an author (void — ResponseEntity<Void>)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+
+    # ─── Book schemas ─────────────────────────────────────────────────────────
+
+    BookDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        title:
+          type: string
+        isbn:
+          type: string
+        genre:
+          type: string
+          enum: [fiction, non_fiction, science, history, biography, technology, art]
+        language:
+          type: string
+        pageCount:
+          type: integer
+        available:
+          type: boolean
+        featured:
+          type: boolean
+          readOnly: true
+        coverUrl:
+          type: string
+          nullable: true
+        authorId:
+          type: integer
+          format: int64
+        publishedAt:
+          type: string
+          format: date
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreateBookRequest:
+      type: object
+      required: [title, isbn, genre, language, pageCount, authorId]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        isbn:
+          type: string
+          pattern: '^\d{3}-\d{10}$'
+        genre:
+          type: string
+          enum: [fiction, non_fiction, science, history, biography, technology, art]
+        language:
+          type: string
+          minLength: 2
+          maxLength: 10
+        pageCount:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        available:
+          type: boolean
+        coverUrl:
+          type: string
+          maxLength: 500
+          nullable: true
+        authorId:
+          type: integer
+          format: int64
+        publishedAt:
+          type: string
+          format: date
+          nullable: true
+
+    UpdateBookRequest:
+      allOf:
+        - type: object
+          required: [title, isbn, genre, language, pageCount, authorId]
+          properties:
+            title:
+              type: string
+              minLength: 1
+              maxLength: 300
+            isbn:
+              type: string
+              pattern: '^\d{3}-\d{10}$'
+            genre:
+              type: string
+              enum: [fiction, non_fiction, science, history, biography, technology, art]
+            language:
+              type: string
+              minLength: 2
+              maxLength: 10
+            pageCount:
+              type: integer
+              minimum: 1
+              maximum: 10000
+            available:
+              type: boolean
+            coverUrl:
+              type: string
+              maxLength: 500
+              nullable: true
+            authorId:
+              type: integer
+              format: int64
+
+    PatchBookRequest:
+      allOf:
+        - type: object
+          properties:
+            title:
+              type: string
+              minLength: 1
+              maxLength: 300
+              nullable: true
+            genre:
+              type: string
+              enum: [fiction, non_fiction, science, history, biography, technology, art]
+              nullable: true
+            available:
+              type: boolean
+              nullable: true
+            coverUrl:
+              type: string
+              maxLength: 500
+              nullable: true
+
+    # oneOf with discriminator — edition types
+    BookEdition:
+      oneOf:
+        - $ref: '#/components/schemas/PhysicalEdition'
+        - $ref: '#/components/schemas/DigitalEdition'
+        - $ref: '#/components/schemas/AudioEdition'
+      discriminator:
+        propertyName: editionType
+        mapping:
+          physical: '#/components/schemas/PhysicalEdition'
+          digital: '#/components/schemas/DigitalEdition'
+          audio: '#/components/schemas/AudioEdition'
+
+    PhysicalEdition:
+      type: object
+      required: [editionType, bindingType, weightGrams]
+      properties:
+        editionType:
+          type: string
+        bindingType:
+          type: string
+          enum: [hardcover, paperback, spiral]
+        weightGrams:
+          type: integer
+          minimum: 50
+          maximum: 5000
+        dimensions:
+          type: string
+          nullable: true
+
+    DigitalEdition:
+      type: object
+      required: [editionType, format, fileSizeMb]
+      properties:
+        editionType:
+          type: string
+        format:
+          type: string
+          enum: [epub, pdf, mobi]
+        fileSizeMb:
+          type: number
+          format: float
+          minimum: 0.1
+        drm:
+          type: boolean
+
+    AudioEdition:
+      type: object
+      required: [editionType, durationMinutes, narrator]
+      properties:
+        editionType:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+        narrator:
+          type: string
+          minLength: 1
+          maxLength: 200
+        audioFormat:
+          type: string
+          enum: [mp3, aac, flac]
+          nullable: true
+
+    # ─── Author schemas ───────────────────────────────────────────────────────
+
+    AuthorDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        nationality:
+          type: string
+          nullable: true
+        birthYear:
+          type: integer
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        websiteUrl:
+          type: string
+          nullable: true
+        bookCount:
+          type: integer
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreateAuthorRequest:
+      type: object
+      required: [firstName, lastName, email]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        nationality:
+          type: string
+          maxLength: 100
+          nullable: true
+        birthYear:
+          type: integer
+          minimum: 1000
+          maximum: 2100
+          nullable: true
+        bio:
+          type: string
+          maxLength: 2000
+          nullable: true
+        websiteUrl:
+          type: string
+          maxLength: 300
+          nullable: true
+
+    UpdateAuthorRequest:
+      type: object
+      required: [firstName, lastName, email]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        nationality:
+          type: string
+          maxLength: 100
+          nullable: true
+        bio:
+          type: string
+          maxLength: 2000
+          nullable: true
+        websiteUrl:
+          type: string
+          maxLength: 300
+          nullable: true
