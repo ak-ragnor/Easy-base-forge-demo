@@ -1,0 +1,51 @@
+# EasyBase Forge — Bookstore Gradle Demo Configuration
+# Demonstrates: MULTI_MODULE layout, custom response wrapper, VOID_ONLY wrapping,
+# addGeneratedAnnotation: false, single author
+
+basePackage: com.example.bookstore
+
+output:
+  directory: src/main/java
+  # MULTI_MODULE: each resource gets its own sub-package tree
+  # e.g. com.example.bookstore.books.controller, com.example.bookstore.authors.dto
+  layout: MULTI_MODULE
+
+structure:
+  controller:
+    package: "{basePackage}.{resource}.controller"
+    basePackage: "{basePackage}.{resource}.controller.base"
+  delegate:
+    package: "{basePackage}.{resource}.delegate"
+  dto:
+    package: "{basePackage}.{resource}.dto"
+
+generate:
+  delegateImpl: true
+
+  # VOID_ONLY: only void-returning operations are wrapped in ResponseEntity<Void>
+  # All other methods return the raw type (ApiResponse<T> or ApiPageResponse<T> via wrapper)
+  # Options: ALWAYS | NEVER | VOID_ONLY
+  responseEntityWrapping: VOID_ONLY
+
+  beanValidation: true
+  pagination: SPRING_DATA
+
+  # Omit @Generated annotation from generated files
+  addGeneratedAnnotation: false
+
+  # Single author (vs authors list in petstore-maven)
+  author: "EasyBase Demo"
+
+  # Add @CrossOrigin for a specific allowed origin (stricter than "*")
+  crossOrigin: "https://app.example.com"
+
+  slf4j: true
+
+  # Custom response wrapper — wraps return types in your own ApiResponse/ApiPageResponse classes
+  # The wrapper classes must exist in your project before running generation
+  responseWrapper:
+    enabled: true
+    singleClass: "com.example.bookstore.common.ApiResponse"
+    pagedClass: "com.example.bookstore.common.ApiPageResponse"
+
+  postGenerateCommand: "echo 'EasyBase: generation complete for bookstore-gradle.'"
