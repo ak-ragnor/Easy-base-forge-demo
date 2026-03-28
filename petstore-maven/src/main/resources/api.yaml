@@ -1,0 +1,746 @@
+openapi: 3.0.3
+info:
+  title: Pet Clinic API
+  description: |
+    Advanced pet clinic REST API demonstrating all EasyBase Forge features:
+    - FLAT layout (PetDTO shared across pets and owners endpoints)
+    - Spring Data pagination
+    - ResponseEntity wrapping
+    - Bean validation (NotBlank, Size, Min, Max, Pattern, Email)
+    - readOnly fields (id, createdAt, updatedAt)
+    - Nullable fields
+    - oneOf with discriminator (medical history polymorphism)
+    - anyOf without discriminator (pet events)
+    - allOf composition (patch requests)
+    - All Java types: UUID, Long, LocalDate, OffsetDateTime, Float, Boolean
+  version: 1.0.0
+
+tags:
+  - name: pets
+    description: Pet management
+  - name: owners
+    description: Owner management
+
+paths:
+  /pets:
+    get:
+      tags: [pets]
+      operationId: listPets
+      summary: List all pets (paginated)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, deceased]
+        - name: species
+          in: query
+          schema:
+            type: string
+            enum: [dog, cat, rabbit, bird]
+        - name: ownerId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      x-easybase-paginated: true
+      responses:
+        '200':
+          description: Paginated list of pets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+    post:
+      tags: [pets]
+      operationId: createPet
+      summary: Create a new pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePetRequest'
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+  /pets/{id}:
+    get:
+      tags: [pets]
+      operationId: getPet
+      summary: Get pet by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pet found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [pets]
+      operationId: updatePet
+      summary: Full update of a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePetRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+    patch:
+      tags: [pets]
+      operationId: patchPet
+      summary: Partial update of a pet (allOf composition)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchPetRequest'
+      responses:
+        '200':
+          description: Patched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+    delete:
+      tags: [pets]
+      operationId: deletePet
+      summary: Delete a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /pets/{id}/vaccinations:
+    post:
+      tags: [pets]
+      operationId: addVaccination
+      summary: Add a vaccination record to a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddVaccinationRequest'
+      responses:
+        '201':
+          description: Vaccination recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaccinationDTO'
+
+  /pets/{id}/medical-history:
+    get:
+      tags: [pets]
+      operationId: getPetMedicalHistory
+      summary: Get latest medical history entry (oneOf with discriminator)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Medical history entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedicalHistoryEntry'
+
+  /pets/{id}/events:
+    get:
+      tags: [pets]
+      operationId: listPetEvents
+      summary: List recent pet events (anyOf without discriminator)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pet events
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/WeightCheckEvent'
+                  - $ref: '#/components/schemas/VaccinationEvent'
+
+  /owners:
+    get:
+      tags: [owners]
+      operationId: listOwners
+      summary: List all owners (paginated)
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+      x-easybase-paginated: true
+      responses:
+        '200':
+          description: Paginated list of owners
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+
+    post:
+      tags: [owners]
+      operationId: createOwner
+      summary: Register a new owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOwnerRequest'
+      responses:
+        '201':
+          description: Owner created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+
+  /owners/{id}:
+    get:
+      tags: [owners]
+      operationId: getOwner
+      summary: Get owner by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Owner found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [owners]
+      operationId: updateOwner
+      summary: Update owner details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnerRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+
+    delete:
+      tags: [owners]
+      operationId: deleteOwner
+      summary: Remove an owner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Deleted
+
+  /owners/{id}/pets:
+    get:
+      tags: [owners]
+      operationId: listOwnerPets
+      summary: List all pets belonging to an owner (shares PetDTO via FLAT layout)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      x-easybase-paginated: true
+      responses:
+        '200':
+          description: Owner's pets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+components:
+  schemas:
+
+    # ─── Pet schemas ─────────────────────────────────────────────────────────
+
+    PetDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true        # maps to @JsonProperty(access = READ_ONLY)
+        name:
+          type: string
+        species:
+          type: string
+          enum: [dog, cat, rabbit, bird]
+        breed:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, deceased]
+        birthDate:
+          type: string
+          format: date          # maps to LocalDate
+          nullable: true
+        weightKg:
+          type: number
+          format: float         # maps to Float
+          nullable: true
+        microchipNumber:
+          type: string
+          nullable: true
+        ownerId:
+          type: integer
+          format: int64         # maps to Long
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time     # maps to OffsetDateTime
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreatePetRequest:
+      type: object
+      required: [name, species, status]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        species:
+          type: string
+          enum: [dog, cat, rabbit, bird]
+        breed:
+          type: string
+          maxLength: 100
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, deceased]
+        birthDate:
+          type: string
+          format: date
+          nullable: true
+        weightKg:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 999
+          nullable: true
+        microchipNumber:
+          type: string
+          pattern: '^[0-9]{15}$'
+          nullable: true
+        ownerId:
+          type: integer
+          format: int64
+          nullable: true
+
+    UpdatePetRequest:
+      type: object
+      required: [name, species, status]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        species:
+          type: string
+          enum: [dog, cat, rabbit, bird]
+        breed:
+          type: string
+          maxLength: 100
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, deceased]
+        birthDate:
+          type: string
+          format: date
+          nullable: true
+        weightKg:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 999
+          nullable: true
+        microchipNumber:
+          type: string
+          pattern: '^[0-9]{15}$'
+          nullable: true
+        ownerId:
+          type: integer
+          format: int64
+          nullable: true
+
+    # allOf composition: PatchPetRequest inherits PetBase fields, all nullable
+    PatchPetRequest:
+      allOf:
+        - type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+              maxLength: 100
+              nullable: true
+            species:
+              type: string
+              enum: [dog, cat, rabbit, bird]
+              nullable: true
+            breed:
+              type: string
+              maxLength: 100
+              nullable: true
+            status:
+              type: string
+              enum: [active, inactive, deceased]
+              nullable: true
+            weightKg:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 999
+              nullable: true
+            ownerId:
+              type: integer
+              format: int64
+              nullable: true
+
+    VaccinationDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vaccineName:
+          type: string
+        administeredDate:
+          type: string
+          format: date
+        nextDueDate:
+          type: string
+          format: date
+          nullable: true
+        vetName:
+          type: string
+          nullable: true
+        batchNumber:
+          type: string
+          nullable: true
+
+    AddVaccinationRequest:
+      type: object
+      required: [vaccineName, administeredDate]
+      properties:
+        vaccineName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        administeredDate:
+          type: string
+          format: date
+        nextDueDate:
+          type: string
+          format: date
+          nullable: true
+        vetName:
+          type: string
+          maxLength: 200
+          nullable: true
+        batchNumber:
+          type: string
+          maxLength: 50
+          nullable: true
+
+    # oneOf with discriminator — polymorphic medical history
+    MedicalHistoryEntry:
+      oneOf:
+        - $ref: '#/components/schemas/VaccinationRecord'
+        - $ref: '#/components/schemas/SurgeryRecord'
+        - $ref: '#/components/schemas/AllergyRecord'
+      discriminator:
+        propertyName: recordType
+        mapping:
+          vaccination: '#/components/schemas/VaccinationRecord'
+          surgery: '#/components/schemas/SurgeryRecord'
+          allergy: '#/components/schemas/AllergyRecord'
+
+    VaccinationRecord:
+      type: object
+      required: [recordType, vaccineName, date]
+      properties:
+        recordType:
+          type: string
+        vaccineName:
+          type: string
+          minLength: 1
+        date:
+          type: string
+          format: date
+        vetName:
+          type: string
+          nullable: true
+
+    SurgeryRecord:
+      type: object
+      required: [recordType, procedure, date]
+      properties:
+        recordType:
+          type: string
+        procedure:
+          type: string
+          minLength: 1
+          maxLength: 300
+        date:
+          type: string
+          format: date
+        surgeonName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+        successful:
+          type: boolean
+
+    AllergyRecord:
+      type: object
+      required: [recordType, allergen, diagnosedDate]
+      properties:
+        recordType:
+          type: string
+        allergen:
+          type: string
+          minLength: 1
+        severity:
+          type: string
+          enum: [mild, moderate, severe]
+          nullable: true
+        diagnosedDate:
+          type: string
+          format: date
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    # anyOf without discriminator — heterogeneous event stream
+    WeightCheckEvent:
+      type: object
+      properties:
+        eventType:
+          type: string
+        weightKg:
+          type: number
+          format: float
+        measuredAt:
+          type: string
+          format: date-time
+        measuredBy:
+          type: string
+          nullable: true
+
+    VaccinationEvent:
+      type: object
+      properties:
+        eventType:
+          type: string
+        vaccineName:
+          type: string
+        administeredAt:
+          type: string
+          format: date-time
+
+    # ─── Owner schemas ────────────────────────────────────────────────────────
+
+    OwnerDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        address:
+          $ref: '#/components/schemas/AddressDTO'
+        petCount:
+          type: integer
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreateOwnerRequest:
+      type: object
+      required: [firstName, lastName, email, address]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\+?[0-9]{7,15}$'
+          nullable: true
+        address:
+          $ref: '#/components/schemas/AddressDTO'
+
+    UpdateOwnerRequest:
+      type: object
+      required: [firstName, lastName, email]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\+?[0-9]{7,15}$'
+          nullable: true
+        address:
+          $ref: '#/components/schemas/AddressDTO'
+
+    # Nested object — used inside OwnerDTO and owner requests
+    AddressDTO:
+      type: object
+      required: [street, city, country]
+      properties:
+        street:
+          type: string
+          minLength: 1
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+          nullable: true
+        zipCode:
+          type: string
+          pattern: '^\d{5}(-\d{4})?$'
+          nullable: true
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
